@@ -1,2 +1,2 @@
 # CG2111A
-2111A code repo
+Project for CG2111A where we control a robot, alex around a maze using lidar and slam. 
