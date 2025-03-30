@@ -164,13 +164,13 @@ void flushInput()
 	while((c = getchar()) != '\n' && c != EOF);
 }
 
-void getParams(TPacket *commandPacket)
-{
-	printf("Enter distance/angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
-	printf("E.g. 50 75 means go at 50 cm at 75%% power for forward/backward, or 50 degrees left or right turn at 75%%  power\n");
-	scanf("%d %d", &commandPacket->params[0], &commandPacket->params[1]);
-	flushInput();
-}
+// void getParams(TPacket *commandPacket)
+// {
+// 	printf("Enter distance/angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
+// 	printf("E.g. 50 75 means go at 50 cm at 75%% power for forward/backward, or 50 degrees left or right turn at 75%%  power\n");
+// 	scanf("%d %d", &commandPacket->params[0], &commandPacket->params[1]);
+// 	flushInput();
+// }
 
 void sendCommand(char command)
 {
@@ -180,63 +180,120 @@ void sendCommand(char command)
 
 	switch(command)
 	{
-		case 'f':
-		case 'F':
-			getParams(&commandPacket);
+		case 'w':
+		case 'W':
+			// getParams(&commandPacket);
 			commandPacket.command = COMMAND_FORWARD;
-			sendPacket(&commandPacket);
-			break;
-
-		case 'b':
-		case 'B':
-			getParams(&commandPacket);
-			commandPacket.command = COMMAND_REVERSE;
-			sendPacket(&commandPacket);
-			break;
-
-		case 'l':
-		case 'L':
-			getParams(&commandPacket);
-			commandPacket.command = COMMAND_TURN_LEFT;
-			sendPacket(&commandPacket);
-			break;
-
-		case 'r':
-		case 'R':
-			getParams(&commandPacket);
-			commandPacket.command = COMMAND_TURN_RIGHT;
 			sendPacket(&commandPacket);
 			break;
 
 		case 's':
 		case 'S':
-			commandPacket.command = COMMAND_STOP;
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_REVERSE;
 			sendPacket(&commandPacket);
 			break;
 
-		case 'c':
-		case 'C':
-			commandPacket.command = COMMAND_CLEAR_STATS;
-			commandPacket.params[0] = 0;
+		case 'a':
+		case 'A':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_TURN_LEFT;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'd':
+		case 'D':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_TURN_RIGHT;
+			sendPacket(&commandPacket);
+			break;
+			
+		case 'f':
+		case 'F':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMMAND_SETTING_1;
 			sendPacket(&commandPacket);
 			break;
 
 		case 'g':
 		case 'G':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMMAND_SETTING_2;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'h':
+		case 'H':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMMAND_SETTING_3;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'z':
+		case 'Z':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_ULTRASONIC;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'x':
+		case 'X':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_COLOUR;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'c':
+		case 'C':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_CAMERA;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'q':
+		case 'Q':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_SERVO_OPEN;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'e':
+		case 'E':
+			// getParams(&commandPacket);
+			commandPacket.command = COMMAND_SERVO_CLOSE;
+			sendPacket(&commandPacket);
+			break;
+
+		case 't':
+		case 'T':
+			commandPacket.command = COMMAND_CLEAR_STATS;
+			commandPacket.params[0] = 0;
+			sendPacket(&commandPacket);
+			break;
+
+		case 'r':
+		case 'R':
 			commandPacket.command = COMMAND_GET_STATS;
 			sendPacket(&commandPacket);
 			break;
 
-		case 'v':
-		case 'V':		//servo
-			printf("Enter yo left and right servo anga(0-180)\n");
-			scanf("%d %d", &commandPacket->params[0], &commandPacket->params[1]);
-			flushInput();
-			commandPacket.command = COMMAND_SERVO;
+		case 'y':
+		case 'Y':
+			commandPacket.command = COMMAND_STOP;
 			sendPacket(&commandPacket);
 			break;
-		case 'q':
-		case 'Q':
+
+		// case 'v':
+		// case 'V':		//servo
+		// 	printf("Enter yo left and right servo anga(0-180)\n");
+		// 	scanf("%d %d", &commandPacket->params[0], &commandPacket->params[1]);
+		// 	flushInput();
+		// 	commandPacket.command = COMMAND_SERVO;
+		// 	sendPacket(&commandPacket);
+		// 	break;
+
+		case 'v':
+		case 'V':
 			exitFlag=1;
 			break;
 
@@ -269,7 +326,7 @@ int main()
 	while(!exitFlag)
 	{
 		char ch;
-		printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, g=get stats q=exit)\n");
+		printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, e=Servo open, q=Servo close,  r=get stats, t=clear data, v=exit)\n");
 		scanf("%c", &ch);
 
 		// Purge extraneous characters from input stream

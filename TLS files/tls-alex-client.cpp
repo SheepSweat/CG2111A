@@ -165,7 +165,7 @@ void *writerThread(void *conn)
 	while(!quit)
 	{
 		char ch;
-		printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, e=Servo open, q=Servo close,  r=get stats, t=clear data, q=exit)\n");
+		printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, e=Servo open, q=Servo close,  r=get stats, t=clear data, y=stop v=exit)\n");
 		if(_kbhit()){
 			ch _getch();
 			printf("You pressed: %c\n",ch);
@@ -210,6 +210,8 @@ void *writerThread(void *conn)
 			case 'T':
 			case 'v':
 			case 'V':
+			case 'y':
+			case 'Y':
 						buffer[1] = ch;
 						sendData(conn,buffer,sizeof(buffer));
 						break;
