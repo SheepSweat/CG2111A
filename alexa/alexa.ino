@@ -1,4 +1,4 @@
-
+#include <Adafruit_TCS34725.h>
 #include <serialize.h>
 #include "packeto.h"
 #include "constanto.h"
@@ -6,6 +6,8 @@
 #include <math.h>
 #include <avr/io.h>
 
+
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
 /*
  * Alex's configuration constants
  */
@@ -25,6 +27,8 @@ volatile TDirection dir;
 
 #define WHEEL_CIRC  20.42 
 //#define PI 3.1415926
+#define TRIG_PIN 25
+#define ECHO_PIN 26
 /*
  *    Alex's State Variables
  */
@@ -51,6 +55,11 @@ unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
 
+int angSpeed = 0; // 0-100% speed (uint8_t if you want memory efficiency)
+int distSpeed = 0;  // 0-100% speed (uint8_t if you want memory efficiency)
+float targetAngle = 0.0;  // Target angle in degrees (float for precision)
+float targetDist = 0.0;  // Target distance in cm (volatile if you want ISR safety)
+
 
 /*
  * 
@@ -58,25 +67,30 @@ unsigned long targetTicks;
  * 
  */
 void left(float ang, float speed){
-  if(ang == 0)
-  deltaTicks=99999999;
+  if(ang == 0){
+    stop();
+    dbprintf("ang 0 detected");
+  }
+  else{
+    deltaTicks=computeDeltaTicks(ang);
 
-  else
-  deltaTicks=computeDeltaTicks(ang);
+    targetTicks = leftReverseTicksTurns + deltaTicks;
 
-  targetTicks = leftReverseTicksTurns + deltaTicks;
-
-  ccw(ang,speed);
+    ccw(ang,speed);
+  }
 }
 void right(float ang, float speed){
-  if(ang == 0)
-  deltaTicks=99999999;
-  else
-  deltaTicks = computeDeltaTicks(ang);
+  if(ang == 0){
+    stop();
+    dbprintf("ang 0 detected");
+  }
+  else{
+    deltaTicks = computeDeltaTicks(ang);
   
-  targetTicks = rightReverseTicksTurns + deltaTicks;
+    targetTicks = rightReverseTicksTurns + deltaTicks;
 
-  cw(ang,speed);
+    cw(ang,speed);
+  }
 }
 
 // New function to estimate number of wheel ticks
@@ -89,7 +103,7 @@ unsigned long computeDeltaTicks(float ang)
     // This is for 360 degrees. For ang degrees it will be (ang * vincentCirc) / (360 * WHEEL_CIRC)
     // To get ticks, we multiply by COUNTS_PER_REV.
 
-    unsigned long ticks = (unsigned long) ((ang * alexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC));
+    unsigned long ticks = (unsigned long) ((ang * alexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC)); //(10*94.3*4)/(360*20.42)=0.513
 
     return ticks;
 }
@@ -311,6 +325,12 @@ void setupSerial()
   // To replace later with bare-metal.
   Serial.begin(9600);
   // Change Serial to Serial2/Serial3/Serial4 in later labs when using the other UARTs
+  if (!tcs.begin()) {  // <- THIS LINE INITIALIZES I2C AND THE SENSOR
+    dbprintf("ERROR: Sensor not found!");
+    while (1);
+    delay(50);
+  }
+  dbprintf("TCS34725 ready!");
 }
 
 // Start the serial connection. For now we are using
@@ -413,6 +433,46 @@ void initializeState()
 {
   clearCounters();
 }
+void ultramode(){  // Initialize sensor
+  digitalWrite(TRIG_PIN, LOW);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+    // Trigger pulse
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+    // Get distance
+  float distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2;
+  dbprintf("OBST:%.1fcm", distance_cm); // Compact obstacle alert
+}
+
+void colourmode() {
+  if (!tcs.begin()) {
+    dbprintf("COLOR:INIT_FAIL");
+    return;
+  }
+
+  uint16_t r, g, b, c;
+  tcs.getRawData(&r, &g, &b, &c);
+
+  // Normalize colors to avoid brightness variations
+  float rn = (float)r / c;
+  float gn = (float)g / c;
+  float bn = (float)b / c;
+
+  // Determine dominant color safely
+  if (rn > gn && rn > bn && rn > 0.4) {  // 40% or more of total color
+    dbprintf("RED");
+  } else if (gn > rn && gn > bn && gn > 0.4) {
+    dbprintf("GREEN");
+  } else {
+    dbprintf("NONE");
+  }
+}
+
+
+void cammode(){;}
 
 void handleCommand(TPacket *command)
 {
@@ -421,36 +481,76 @@ void handleCommand(TPacket *command)
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_FORWARD:
         sendOK();
-        forward((double) command->params[0], (float) command->params[1]);
+        forward(targetDist, distSpeed);
       break;
 
-    /*
-     * Implement code for other commands here.
-     * 
-     */
      case COMMAND_REVERSE:
         sendOK();
-        backward((double)command->params[0], (float) command->params[1]);
+        backward(targetDist, distSpeed);
       break;
 
      case COMMAND_TURN_LEFT:
         sendOK();
-        left((double) command->params[0], (float) command->params[1]);
+        left(targetAngle, angSpeed);
       break;
 
      case COMMAND_TURN_RIGHT:       
         sendOK();
-        right((double) command->params[0], (float) command->params[1]);
+        right(targetAngle, angSpeed);
       break;
-
-     case COMMAND_SERVO:       
+     
+     case COMMAND_GEAR_1:
         sendOK();
-        servo_angle((int)command->params[0], (int)command->params[1]);
+        distSpeed=50;
+        angSpeed=70;
+        targetAngle=10;
+        targetDist=2;
       break;
-
+     
+     case COMMAND_GEAR_2:
+     sendOK();
+        distSpeed=70;
+        angSpeed=70;
+        targetAngle=20;
+        targetDist=5;
+      break;
+     
+     case COMMAND_GEAR_3:
+     sendOK();
+        distSpeed=100;
+        angSpeed=70;
+        targetAngle=30;
+        targetDist=10;
+      break;
+     
+     case COMMAND_ULTRA:
+      sendOK();
+        ultramode();
+      break;
+     
+     case COMMAND_COLOUR:
+     sendOK();
+       colourmode();
+      break;
+     
+     case COMMAND_CAM:
+        sendOK();
+        cammode();
+      break;
+     
      case COMMAND_STOP:
+          sendOK();
+          stop();
+      break;
+
+     case COMMAND_SERVO_OPEN:
         sendOK();
-        stop();
+        servo_angle(180,0);
+      break;
+
+     case COMMAND_SERVO_CLOSE:   
+        sendOK();
+        servo_angle(45, 135); //do adjust
       break;
 
      case COMMAND_GET_STATS:
@@ -507,27 +607,27 @@ void waitForHello()
 
 void init_servo(){
   // Set Pin 45 (PL4) and Pin 46 (PL3) as output
-  DDRH |= (1 << PH6);  // PH6-PIN9 OC2B
-  DDRB |= (1<<PB4); // PB4 - PIN10 OC2A
+  DDRL |= (1 << PL3);  // PH6-PIN9 OC2B//PL3-PIN46-OCR5A
+  DDRL |= (1 << PL4); // PB4 - PIN10 OC2A//PL4-PIN45-OCR5B
 
   // Configure Timer5 for Phase Correct PWM mode (ICR5 as TOP)
-  TCCR2A = (1 << COM2A1) | (1 << COM2B1) | (1 << WGM20); // Clear on match, phase correct
- 
+  TCCR5A = (1 << COM5A1) | (1 << COM5B1) | (1 << WGM51); // Clear on match, phase correct, mode 10, wgm53&51
+  TCCR5B = (1 << WGM53);
 
   // Set initial duty cycle (neutral position for servos)
-  OCR2A = 140;  // 1.5ms pulse width
-  OCR2B = 140;
-
+  ICR5 = 20000;
+  OCR5A = 2000;  // 1.0ms/1.5ms/2.0ms 1000/1500/2000 pulse width // 180deg //left-->right
+  OCR5B = 1000; // 1.0ms/1.5ms/2.0ms 1000/1500/2000 pulse width // 0deg  //right-->left
 
   // Start Timer5 with a prescaler of 8
-  TCCR2B |= (1 << CS22);
+  TCCR5B |= (1 << CS51);
 } 
 
 
 void setup() {
   // put your setup code here, to run once:
-  alexDiagonal = sqrt((ALEX_LENGTH * ALEX_LENGTH) + (ALEX_BREADTH * ALEX_BREADTH));
- alexCirc = PI * alexDiagonal;
+ alexDiagonal = sqrt((ALEX_LENGTH * ALEX_LENGTH) + (ALEX_BREADTH * ALEX_BREADTH)); //30.017
+ alexCirc = PI * alexDiagonal;  //94.3
 
   cli();
   setupEINT();
@@ -562,89 +662,67 @@ void handlePacket(TPacket *packet)
 }
 
 void loop() {
-// Uncomment the code below for Step 2 of Activity 3 in Week 8 Studio 2
+  // Uncomment for Step 2 of Activity 3 in Week 8 Studio 2
+  // forward(0, 100);
 
-// forward(0, 100);
-
-// Uncomment the code below for Week 9 Studio 2
-
-
- // put your main code here, to run repeatedly:
+  // Uncomment for Week 9 Studio 2
+  // Process incoming packets from the Pi
   TPacket recvPacket; // This holds commands from the Pi
-
   TResult result = readPacket(&recvPacket);
   
-  if(result == PACKET_OK)
-    handlePacket(&recvPacket);
-  else
-    if(result == PACKET_BAD)
-    {
-      sendBadPacket();
-    }
-    else
-      if(result == PACKET_CHECKSUM_BAD)
-      {
-        sendBadChecksum();
-      } 
-      
-  if(deltaDist > 0)
-  {
-    if(dir==FORWARD)
-    {
-      if(forwardDist > newDist)
-      {
-        deltaDist=0;
-        newDist=0;
+  if (result == PACKET_OK) {
+    handlePacket(&recvPacket);  // Triggers handleCommand -> which triggers all action functions
+  } 
+  else if (result == PACKET_BAD) {
+    sendBadPacket();
+  }
+  else if (result == PACKET_CHECKSUM_BAD) {
+    sendBadChecksum();
+  }
+
+  // Check if forward/backward movement is complete
+  if (deltaDist > 0) {
+    if (dir == FORWARD) {
+      if (forwardDist > newDist) {
+        deltaDist = 0;
+        newDist = 0;
         stop();
       }
     }
-    else
-      if(dir == BACKWARD)
-      {
-        if(reverseDist > newDist)
-        {
-          deltaDist=0;
-          newDist=0;
-          stop();
-        }
-      }
-    else
-      if((Tdir)dir == STOP)
-      {
-        deltaDist=0;
-        newDist=0;
+    else if (dir == BACKWARD) {
+      if (reverseDist > newDist) {
+        deltaDist = 0;
+        newDist = 0;
         stop();
       }
     }
+    else if (dir == STOP) {
+      deltaDist = 0;
+      newDist = 0;
+      stop();
+    }
+  }
 
-    if (deltaTicks > 0)
-    {
-      if (dir == LEFT)
-      {
-
-          if (leftReverseTicksTurns >= targetTicks)
-          {
-              deltaTicks = 0;
-              targetTicks = 0;
-              stop();
-          }
-      }
-      else if (dir == RIGHT)
-      {
-          if (rightReverseTicksTurns >= targetTicks)
-          {
-              deltaTicks = 0;
-              targetTicks = 0;
-              stop();
-          }
-      }
-      else if ((Tdir)dir == STOP)
-      {
-          deltaTicks = 0;
-          targetTicks = 0;
-          stop();
+  // Check if rotation (left/right) is complete
+  if (deltaTicks > 0) {
+    if (dir == LEFT) {
+      if (leftReverseTicksTurns >= targetTicks) {
+        deltaTicks = 0;
+        targetTicks = 0;
+        stop();
       }
     }
-
-
- }
+    else if (dir == RIGHT) {
+      if (rightReverseTicksTurns >= targetTicks) {
+        deltaTicks = 0;
+        targetTicks = 0;
+        stop();
+      }
+    }
+    else if (dir == STOP) {
+      deltaTicks = 0;
+      targetTicks = 0;
+      stop();
+    }
+  }
+}
