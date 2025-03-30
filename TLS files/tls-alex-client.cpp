@@ -8,6 +8,9 @@
 // Packet types, error codes, etc.
 #include "constants.h"
 
+// to remove need for enter
+#include <conio.h>
+
 // Tells us that the network is running.
 static volatile int networkActive=0;
 
@@ -147,13 +150,13 @@ void flushInput()
 	while((c = getchar()) != '\n' && c != EOF);
 }
 
-void getParams(int32_t *params)
-{
-	printf("Enter distance/angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
-	printf("E.g. 50 75 means go at 50 cm at 75%% power for forward/backward, or 50 degrees left or right turn at 75%%  power\n");
-	scanf("%d %d", &params[0], &params[1]);
-	flushInput();
-}
+// void getParams(int32_t *params)
+// {
+// 	printf("Enter distance/angle in cm/degrees (e.g. 50) and power in %% (e.g. 75) separated by space.\n");
+// 	printf("E.g. 50 75 means go at 50 cm at 75%% power for forward/backward, or 50 degrees left or right turn at 75%%  power\n");
+// 	scanf("%d %d", &params[0], &params[1]);
+// 	flushInput();
+// }
 
 void *writerThread(void *conn)
 {
@@ -162,8 +165,11 @@ void *writerThread(void *conn)
 	while(!quit)
 	{
 		char ch;
-		printf("Command (f=forward, b=reverse, l=turn left, r=turn right, s=stop, c=clear stats, g=get stats q=exit)\n");
-		scanf("%c", &ch);
+		printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, e=Servo open, q=Servo close,  r=get stats, t=clear data, q=exit)\n");
+		if(_kbhit()){
+			ch _getch();
+			printf("You pressed: %c\n",ch);
+		}
 
 		// Purge extraneous characters from input stream
 		flushInput();
@@ -174,44 +180,77 @@ void *writerThread(void *conn)
 		buffer[0] = NET_COMMAND_PACKET;
 		switch(ch)
 		{
-			case 'f':
-			case 'F':
-			case 'b':
-			case 'B':
-			case 'l':
-			case 'L':
-			case 'r':
-			case 'R':
-						getParams(params);
-						buffer[1] = ch;
-						memcpy(&buffer[2], params, sizeof(params));
-						sendData(conn, buffer, sizeof(buffer));
-						break;
+			case 'w':
+			case 'W':
 			case 's':
 			case 'S':
-			case 'c':
-			case 'C':
+			case 'a':
+			case 'A':
+			case 'd':
+			case 'D':
+			case 'f':
+			case 'F':
 			case 'g':
 			case 'G':
-					params[0]=0;
-					params[1]=0;
-					memcpy(&buffer[2], params, sizeof(params));
-					buffer[1] = ch;
-					sendData(conn, buffer, sizeof(buffer));
-					break;
+			case 'h':
+			case 'H':
+			case 'z':
+			case 'Z':
+			case 'c':
+			case 'C':
+			case 'x':
+			case 'X':
 			case 'q':
 			case 'Q':
-				quit=1;
-				break;
+			case 'e':
+			case 'E':
+			case 'r':
+			case 'R':
+			case 't':
+			case 'T':
 			case 'v':
 			case 'V':
-					printf("Enter yo left and right servo anga(0-180)\n");
-					scanf("%d""%d", &params[0], &params[1]);
-					flushInput();
-					buffer[1] = ch;
-					memcpy(&buffer[2], params, sizeof(params));
-					sendData(conn, buffer, sizeof(buffer));
-					break;
+						buffer[1] = ch;
+						sendData(conn,buffer,sizeof(buffer));
+						break;
+			// case 'f':
+			// case 'F':
+			// case 'b':
+			// case 'B':
+			// case 'l':
+			// case 'L':
+			// case 'r':
+			// case 'R':
+			// 			getParams(params);
+			// 			buffer[1] = ch;
+			// 			memcpy(&buffer[2], params, sizeof(params));
+			// 			sendData(conn, buffer, sizeof(buffer));
+			// 			break;
+			// case 's':
+			// case 'S':
+			// case 'c':
+			// case 'C':
+			// case 'g':
+			// case 'G':
+			// 		params[0]=0;
+			// 		params[1]=0;
+			// 		memcpy(&buffer[2], params, sizeof(params));
+			// 		buffer[1] = ch;
+			// 		sendData(conn, buffer, sizeof(buffer));
+			// 		break;
+			// case 'q':
+			// case 'Q':
+			// 	quit=1;
+			// 	break;
+			// case 'v':
+			// case 'V':
+			// 		printf("Enter yo left and right servo anga(0-180)\n");
+			// 		scanf("%d""%d", &params[0], &params[1]);
+			// 		flushInput();
+			// 		buffer[1] = ch;
+			// 		memcpy(&buffer[2], params, sizeof(params));
+			// 		sendData(conn, buffer, sizeof(buffer));
+			// 		break;
 
 			default:
 				printf("BAD COMMAND\n");
