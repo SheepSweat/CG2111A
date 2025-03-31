@@ -1,4 +1,4 @@
-#include <Adafruit_TCS34725.h>
+
 #include <serialize.h>
 #include "packeto.h"
 #include "constanto.h"
