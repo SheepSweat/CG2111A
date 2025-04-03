@@ -26,25 +26,25 @@ void move(float speed, int direction)
     {
       case BACK:
         motorFL.run(BACKWARD);
-        motorFR.run(BACKWARD);
+        motorFR.run(FORWARD);
         motorBL.run(FORWARD);
         motorBR.run(FORWARD); 
       break;
       case GO:
         motorFL.run(FORWARD);
-        motorFR.run(FORWARD);
+        motorFR.run(BACKWARD);
         motorBL.run(BACKWARD);
         motorBR.run(BACKWARD); 
       break;
       case CW:
         motorFL.run(BACKWARD);
-        motorFR.run(BACKWARD);
+        motorFR.run(FORWARD);
         motorBL.run(BACKWARD);
         motorBR.run(BACKWARD); 
       break;
       case CCW:
         motorFL.run(FORWARD);
-        motorFR.run(FORWARD);
+        motorFR.run(BACKWARD);
         motorBL.run(FORWARD);
         motorBR.run(FORWARD); 
       break;
@@ -98,20 +98,22 @@ void cw(float dist, float speed)
   dir=(TDirection) RIGHT;
   move(speed, CW);
 }
+/*
 void servo_angle(const int left_angle, const int right_angle) { //20,160
   if(left_angle>180 || left_angle<0 || right_angle>180 ||right_angle<0){
     return; // do it again
   }
   // Convert angle (0-180) to PWM value (1000-2000 for ~1ms-2ms)
-   OCR5A = 1000 + (left_angle * 1000 / 180);  
-   OCR5B = 1000 + (right_angle * 1000 / 180);
+   OCR5A = 1500 + (left_angle * 1000 / 180);  
+   OCR5B = 1500 + (right_angle * 1000 / 180);
 }
-
+*/
 void stop()
 {
   dir=(TDirection) STOP;
   move(0, STOP);
   newDist=0;
   deltaDist=0;
+  deltaTicks=0;
+  targetTicks=0;
 }
-

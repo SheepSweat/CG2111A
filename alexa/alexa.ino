@@ -1,20 +1,20 @@
-#include <Adafruit_TCS34725.h>
+//#include <Adafruit_TCS34726.h>
 #include <serialize.h>
 #include "packeto.h"
 #include "constanto.h"
-#include <stdarg.h>
+#include "stdarg.h"
 #include <math.h>
 #include <avr/io.h>
+#include <Servo.h>
 
-
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_4X);
+//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_4X);
 /*
  * Alex's configuration constants
  */
 volatile TDirection dir;
 
-#define ALEX_LENGTH 26
-#define ALEX_BREADTH 15
+#define ALEX_LENGTH 12 
+#define ALEX_BREADTH 14 
 
 // Number of ticks per revolution from the 
 // wheel encoder.
@@ -25,15 +25,24 @@ volatile TDirection dir;
 // We will use this to calculate forward/backward distance traveled 
 // by taking revs * WHEEL_CIRC
 
-#define WHEEL_CIRC  20.42 
+#define WHEEL_CIRC 20
 //#define PI 3.1415926
 #define TRIG_PIN 25
 #define ECHO_PIN 26
+
+#define TCS3200_S0  30// Choose your pin numbers
+#define TCS3200_S1  31// Choose your pin numbers
+#define TCS3200_S2  32// Choose your pin numbers
+#define TCS3200_S3  33// Choose your pin numbers
+#define TCS3200_OUT 34// Choose your pin numbers
+
+int offset=0;
 /*
  *    Alex's State Variables
  */
-volatile float alexDiagonal;
-volatile float alexCirc;
+volatile float alexDiagonal = 18.44;
+volatile float alexCirc = 57.93;
+
 // Store the ticks from Alex's left and
 // right encoders.
 volatile unsigned long leftForwardTicks; 
@@ -55,12 +64,14 @@ unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
 
-int angSpeed = 0; // 0-100% speed (uint8_t if you want memory efficiency)
-int distSpeed = 0;  // 0-100% speed (uint8_t if you want memory efficiency)
-float targetAngle = 0.0;  // Target angle in degrees (float for precision)
-float targetDist = 0.0;  // Target distance in cm (volatile if you want ISR safety)
+int angSpeed = 70; // 0-100% speed (uint8_t if you want memory efficiency)
+int distSpeed = 100;  // 0-100% speed (uint8_t if you want memory efficiency)
+float targetAngle = 40;  // Target angle in degrees (float for precision)
+float targetDist = 5;  // Target distance in cm (volatile if you want ISR safety)
 
 
+Servo servo1; //  pin 9
+Servo servo2; // pin 10
 /*
  * 
  * Alex Communication Routines.
@@ -71,13 +82,18 @@ void left(float ang, float speed){
     stop();
     dbprintf("ang 0 detected");
   }
-  else{
+    else{
     deltaTicks=computeDeltaTicks(ang);
 
     targetTicks = leftReverseTicksTurns + deltaTicks;
-
+    Serial.println("THis is the delta ticks:");
+    Serial.println(deltaTicks);
+    Serial.println("THis is the target ticks:");
+    Serial.println(targetTicks);
+    //dir=(TDirection) LEFT;
     ccw(ang,speed);
-  }
+    }
+
 }
 void right(float ang, float speed){
   if(ang == 0){
@@ -88,7 +104,12 @@ void right(float ang, float speed){
     deltaTicks = computeDeltaTicks(ang);
   
     targetTicks = rightReverseTicksTurns + deltaTicks;
-
+    /*
+    Serial.println("THis is the delta ticks:");
+    Serial.println(deltaTicks);
+    Serial.println("THis is the target ticks:");
+    Serial.println(targetTicks);*/
+    //dir=(TDirection) RIGHT;
     cw(ang,speed);
   }
 }
@@ -103,8 +124,9 @@ unsigned long computeDeltaTicks(float ang)
     // This is for 360 degrees. For ang degrees it will be (ang * vincentCirc) / (360 * WHEEL_CIRC)
     // To get ticks, we multiply by COUNTS_PER_REV.
 
-    unsigned long ticks = (unsigned long) ((ang * alexCirc * COUNTS_PER_REV) / (360.0 * WHEEL_CIRC)); //(10*94.3*4)/(360*20.42)=0.513
-
+    unsigned long ticks = (unsigned long) (round((ang * alexCirc * 5) / (360.0 * 19.8))); //(10*94.3*4)/(360*20.42)=0.513
+   /* Serial.println("THis is the after computing:");
+    Serial.println(targetTicks);*/
     return ticks;
 }
  
@@ -153,7 +175,7 @@ void sendStatus()
 
     sendResponse(&statusPacket);
 }
-void dbprintf(char *format, ...) {
+void dbprintf(const char *format, ...) {
   va_list args;
   char buffer[128];
   va_start(args, format);
@@ -243,7 +265,7 @@ void enablePullups()
 {
   // Use bare-metal to enable the pull-up resistors on pins
   // 19 and 18. These are pins PD2 and PD3 respectively.
-  // We set bits 2 and 3 in DDRD to 0 to make them inputs. 
+  // We set bits 4 and 3 in DDRD to 0 to make them inputs. 
   DDRD&=~(0b00001100); //input for PD2 & 3
   PORTD|=0b00001100;  //pullup
 }
@@ -271,9 +293,12 @@ void leftISR()
     leftForwardTicksTurns++;
     
   }
-
-  //Serial.print("LEFT: ");
-  //Serial.println(leftTicks);
+/*
+  Serial.print("LEFTturnsreverse: ");
+  Serial.println(leftReverseTicksTurns);
+  Serial.print("LEFTreverse: ");
+  Serial.println(leftReverseTicks);
+  */
 }
 
 void rightISR()
@@ -284,14 +309,16 @@ void rightISR()
     rightReverseTicks++;
   }else if(dir==LEFT){
     rightForwardTicksTurns++;
-    
   }else if(dir==RIGHT){
     rightReverseTicksTurns++;
    
   }
-
-  //Serial.print("RIGHT: ");
-  //Serial.println(rightTicks);
+/*
+  Serial.print("RIGHTreverseTurns: ");
+  Serial.println(rightReverseTicksTurns);
+    Serial.print("RIghtreverse: ");
+  Serial.println(leftReverseTicks);
+  */
 }
 
 // Set up the external interrupt pins INT2 and INT3
@@ -325,12 +352,12 @@ void setupSerial()
   // To replace later with bare-metal.
   Serial.begin(9600);
   // Change Serial to Serial2/Serial3/Serial4 in later labs when using the other UARTs
-  if (!tcs.begin()) {  // <- THIS LINE INITIALIZES I2C AND THE SENSOR
+/*  if (!tcs.begin()) {  // <- THIS LINE INITIALIZES I2C AND THE SENSOR
     dbprintf("ERROR: Sensor not found!");
     while (1);
     delay(50);
   }
-  dbprintf("TCS34725 ready!");
+  dbprintf("TCS34725 ready!");*/
 }
 
 // Start the serial connection. For now we are using
@@ -433,6 +460,7 @@ void initializeState()
 {
   clearCounters();
 }
+
 void ultramode(){  // Initialize sensor
   digitalWrite(TRIG_PIN, LOW);
   pinMode(TRIG_PIN, OUTPUT);
@@ -443,10 +471,11 @@ void ultramode(){  // Initialize sensor
   digitalWrite(TRIG_PIN, LOW);
 
     // Get distance
-  float distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2;
+  int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset; //currently 0
   dbprintf("OBST:%.1fcm", distance_cm); // Compact obstacle alert
 }
 
+/*
 void colourmode() {
   if (!tcs.begin()) {
     dbprintf("COLOR:INIT_FAIL");
@@ -469,8 +498,66 @@ void colourmode() {
   } else {
     dbprintf("NONE");
   }
+} //this is for tcs34725
+*/
+
+
+void setupTCS3200() {
+  pinMode(TCS3200_S0, OUTPUT);
+  pinMode(TCS3200_S1, OUTPUT);
+  pinMode(TCS3200_S2, OUTPUT);
+  pinMode(TCS3200_S3, OUTPUT);
+  pinMode(TCS3200_OUT, INPUT);
+  
+  // Set frequency scaling to 20% (you can adjust this)
+  digitalWrite(TCS3200_S0, HIGH);
+  digitalWrite(TCS3200_S1, LOW); //HIGH HIGH 100, LOW HIGH 2, HIGH LOW 20
+  
+  dbprintf("TCS3200 ready!");
 }
 
+void colourmode() {
+  // Read red component
+  digitalWrite(TCS3200_S2, LOW);
+  digitalWrite(TCS3200_S3, LOW);
+  delay(100);
+  int red = pulseIn(TCS3200_OUT, LOW);
+  
+  // Read green component
+  digitalWrite(TCS3200_S2, HIGH);
+  digitalWrite(TCS3200_S3, HIGH);
+  delay(100);
+  int green = pulseIn(TCS3200_OUT, LOW);
+  
+  // Read blue component
+  digitalWrite(TCS3200_S2, LOW);
+  digitalWrite(TCS3200_S3, HIGH);
+  delay(100);
+  int blue = pulseIn(TCS3200_OUT, LOW);
+  
+  // Determine dominant color
+  if (red < green && red < blue) {  // Lower value means stronger color
+    dbprintf("RED");
+ //Serial.print("RED");
+  } 
+  else if (green < red && green < blue) {
+    dbprintf("GREEN");
+  //   Serial.print("GREEN");
+  } 
+  else {
+    dbprintf("NONE");
+   //  Serial.print("NONE");
+  }/*
+  Serial.print("red ");
+ Serial.print(red);
+
+  Serial.print("green ");
+   Serial.print(green);
+
+  Serial.print("blue ");
+  Serial.print(blue);
+  Serial.println(" ");*/
+}// this is for tcs3200
 
 void cammode(){;}
 
@@ -480,6 +567,7 @@ void handleCommand(TPacket *command)
   {
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_FORWARD:
+    dbprintf("forward");
         sendOK();
         forward(targetDist, distSpeed);
       break;
@@ -503,7 +591,7 @@ void handleCommand(TPacket *command)
         sendOK();
         distSpeed=50;
         angSpeed=70;
-        targetAngle=10;
+        targetAngle=20;
         targetDist=2;
       break;
      
@@ -511,7 +599,7 @@ void handleCommand(TPacket *command)
      sendOK();
         distSpeed=70;
         angSpeed=70;
-        targetAngle=20;
+        targetAngle=40;
         targetDist=5;
       break;
      
@@ -519,7 +607,7 @@ void handleCommand(TPacket *command)
      sendOK();
         distSpeed=100;
         angSpeed=70;
-        targetAngle=30;
+        targetAngle=90;
         targetDist=10;
       break;
      
@@ -530,7 +618,7 @@ void handleCommand(TPacket *command)
      
      case COMMAND_COLOUR:
      sendOK();
-       colourmode();
+     //  colourmode();
       break;
      
      case COMMAND_CAM:
@@ -545,12 +633,18 @@ void handleCommand(TPacket *command)
 
      case COMMAND_SERVO_OPEN:
         sendOK();
-        servo_angle(180,0);
+        //servo_angle(180,0);
+	servo1.write(130);
+	servo2.write(20);
       break;
 
      case COMMAND_SERVO_CLOSE:   
         sendOK();
-        servo_angle(45, 135); //do adjust
+//        servo_angle(0, 180); //do adjust
+	servo1.write(30);
+	servo2.write(90);
+
+        dbprintf("close done");
       break;
 
      case COMMAND_GET_STATS:
@@ -604,7 +698,7 @@ void waitForHello()
           sendBadChecksum();
   } // !exit
 }
-
+/*
 void init_servo(){
   // Set Pin 45 (PL4) and Pin 46 (PL3) as output
   DDRL |= (1 << PL3);  // PH6-PIN9 OC2B//PL3-PIN46-OCR5A
@@ -622,21 +716,38 @@ void init_servo(){
   // Start Timer5 with a prescaler of 8
   TCCR5B |= (1 << CS51);
 } 
-
+*/
 
 void setup() {
   // put your setup code here, to run once:
- alexDiagonal = sqrt((ALEX_LENGTH * ALEX_LENGTH) + (ALEX_BREADTH * ALEX_BREADTH)); //30.017
- alexCirc = PI * alexDiagonal;  //94.3
+
 
   cli();
   setupEINT();
   setupSerial();
   startSerial();
   enablePullups();
-  init_servo();
+  //init_servo();
+  servo1.attach(9);
+  servo2.attach(10);
+  servo1.write(130);
+  servo2.write(20);
+/*
+  for(int i=0; i<50 ;i++){
+  servo1.write(130);
+  servo2.write(20);
+  delay(500);
+  servo1.write(30);
+  servo2.write(90);*/
+  /* this is for colour testing
+  for(int i=0; i<100; i++){
+  ultramode();
+  delay(500);
+  }
+  */ //this is for ultrasonic testing
   initializeState();
   sei();
+  
 }
 
 void handlePacket(TPacket *packet)
@@ -679,14 +790,27 @@ void loop() {
   else if (result == PACKET_CHECKSUM_BAD) {
     sendBadChecksum();
   }
-
+ //test movements
+      
+  //forward(100, 40);
+  //backward(20, 40);
+  //stop();
+  //left(100, 40);
+  
+  //right(10, 40);
+    
+  
+  
+  //
   // Check if forward/backward movement is complete
   if (deltaDist > 0) {
     if (dir == FORWARD) {
+      dbprintf("forward");
       if (forwardDist > newDist) {
         deltaDist = 0;
         newDist = 0;
         stop();
+        dir=(TDirection) STOP;
       }
     }
     else if (dir == BACKWARD) {
@@ -694,13 +818,15 @@ void loop() {
         deltaDist = 0;
         newDist = 0;
         stop();
+        dir=(TDirection) STOP;
       }
-    }
-    else if (dir == STOP) {
-      deltaDist = 0;
-      newDist = 0;
-      stop();
-    }
+    } else if((Tdir)dir == STOP)
+      {
+        deltaDist=0;
+        newDist=0;
+        stop();
+        dir=(TDirection) STOP;
+      }
   }
 
   // Check if rotation (left/right) is complete
@@ -710,6 +836,8 @@ void loop() {
         deltaTicks = 0;
         targetTicks = 0;
         stop();
+        dir=(TDirection) STOP;
+        Serial.println("target ticks reached");
       }
     }
     else if (dir == RIGHT) {
@@ -717,12 +845,15 @@ void loop() {
         deltaTicks = 0;
         targetTicks = 0;
         stop();
+        dir=(TDirection) STOP;
+        Serial.println("target ticks reached");
       }
-    }
-    else if (dir == STOP) {
-      deltaTicks = 0;
-      targetTicks = 0;
-      stop();
-    }
+    } else if ((Tdir)dir == STOP)
+      {
+          deltaTicks = 0;
+          targetTicks = 0;
+          stop();
+          dir=(TDirection) STOP;
+      }
   }
 }
