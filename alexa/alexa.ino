@@ -19,7 +19,7 @@ volatile TDirection dir;
 // Number of ticks per revolution from the 
 // wheel encoder.
 
-#define COUNTS_PER_REV      4//edit pls
+#define COUNTS_PER_REV      5//edit pls
 
 // Wheel circumference in cm.
 // We will use this to calculate forward/backward distance traveled 
@@ -69,9 +69,13 @@ int distSpeed = 100;  // 0-100% speed (uint8_t if you want memory efficiency)
 float targetAngle = 40;  // Target angle in degrees (float for precision)
 float targetDist = 5;  // Target distance in cm (volatile if you want ISR safety)
 
+unsigned long lastUltrasonicReport = 0;
+unsigned long currentMillis;
+unsigned int ultramode=0;
 
 Servo servo1; //  pin 9
 Servo servo2; // pin 10
+Servo servo3; // pin 46
 /*
  * 
  * Alex Communication Routines.
@@ -86,10 +90,12 @@ void left(float ang, float speed){
     deltaTicks=computeDeltaTicks(ang);
 
     targetTicks = leftReverseTicksTurns + deltaTicks;
+    /*
     Serial.println("THis is the delta ticks:");
     Serial.println(deltaTicks);
     Serial.println("THis is the target ticks:");
     Serial.println(targetTicks);
+    */
     //dir=(TDirection) LEFT;
     ccw(ang,speed);
     }
@@ -461,7 +467,7 @@ void initializeState()
   clearCounters();
 }
 
-void ultramode(){  // Initialize sensor
+int getDistance(){  // Initialize sensor
   digitalWrite(TRIG_PIN, LOW);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
@@ -472,7 +478,7 @@ void ultramode(){  // Initialize sensor
 
     // Get distance
   int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset; //currently 0
-  dbprintf("OBST:%.1fcm", distance_cm); // Compact obstacle alert
+  return distance_cm;
 }
 
 /*
@@ -567,7 +573,6 @@ void handleCommand(TPacket *command)
   {
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_FORWARD:
-    dbprintf("forward");
         sendOK();
         forward(targetDist, distSpeed);
       break;
@@ -613,7 +618,7 @@ void handleCommand(TPacket *command)
      
      case COMMAND_ULTRA:
       sendOK();
-        ultramode();
+        ultramode^=1;
       break;
      
      case COMMAND_COLOUR:
@@ -634,17 +639,35 @@ void handleCommand(TPacket *command)
      case COMMAND_SERVO_OPEN:
         sendOK();
         //servo_angle(180,0);
-	servo1.write(130);
-	servo2.write(20);
+	    servo1.write(130);
+	    servo2.write(20);
+      dbprintf("servo opened");
       break;
 
      case COMMAND_SERVO_CLOSE:   
         sendOK();
 //        servo_angle(0, 180); //do adjust
-	servo1.write(30);
-	servo2.write(90);
+	      servo1.write(30);
+	      servo2.write(90);
+        dbprintf("servo closed");
+      break;
 
-        dbprintf("close done");
+     case COMMAND_TURN_AND_OPEN_TRAP:
+      sendOK();
+      backward(2,100);
+      left(90,100);
+      backward(2,100);
+      stop();
+      servo3.write(0);
+      dbprintf("trap opened, start shaking");
+      break;
+
+     case COMMAND_SHAKE:
+        dbprintf("SHAKING");
+        sendOK();
+        forward(2,100);
+        backward(2,100);
+        stop();
       break;
 
      case COMMAND_GET_STATS:
@@ -732,6 +755,7 @@ void setup() {
   servo2.attach(10);
   servo1.write(130);
   servo2.write(20);
+  servo3.write(75);
 /*
   for(int i=0; i<50 ;i++){
   servo1.write(130);
@@ -805,7 +829,6 @@ void loop() {
   // Check if forward/backward movement is complete
   if (deltaDist > 0) {
     if (dir == FORWARD) {
-      dbprintf("forward");
       if (forwardDist > newDist) {
         deltaDist = 0;
         newDist = 0;
@@ -837,7 +860,7 @@ void loop() {
         targetTicks = 0;
         stop();
         dir=(TDirection) STOP;
-        Serial.println("target ticks reached");
+        //Serial.println("target ticks reached");
       }
     }
     else if (dir == RIGHT) {
@@ -846,7 +869,7 @@ void loop() {
         targetTicks = 0;
         stop();
         dir=(TDirection) STOP;
-        Serial.println("target ticks reached");
+        //Serial.println("target ticks reached");
       }
     } else if ((Tdir)dir == STOP)
       {
@@ -855,5 +878,13 @@ void loop() {
           stop();
           dir=(TDirection) STOP;
       }
+  }
+   // Periodically report ultrasonic distance
+  if(ultramode==1){
+    currentMillis = millis();
+    if (currentMillis - lastUltrasonicReport >= 200) {
+    int distance = getDistance();
+    dbprintf("DIST:%d", distance);
+    lastUltrasonicReport = currentMillis;
   }
 }
