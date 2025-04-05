@@ -22,8 +22,7 @@ void move(float speed, int direction)
   motorBL.setSpeed(speed_scaled);
   motorBR.setSpeed(speed_scaled);
 
-  switch(direction)
-    {
+  switch(direction){
       case BACK:
         motorFL.run(BACKWARD);
         motorFR.run(FORWARD);
@@ -72,8 +71,7 @@ void forward(float dist, float speed)
   move(speed, FORWARD);
 }
 
-void backward(float dist, float speed)
-{
+void backward(float dist, float speed){
   if(dist > 0){
     deltaDist = dist;
   } 
