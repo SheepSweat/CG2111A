@@ -13,16 +13,16 @@
  */
 volatile TDirection dir;
 
-#define ALEX_LENGTH 12 
-#define ALEX_BREADTH 14 
+#define ALEX_LENGTH 12
+#define ALEX_BREADTH 14
 
-// Number of ticks per revolution from the 
+// Number of ticks per revolution from the
 // wheel encoder.
 
-#define COUNTS_PER_REV      5//edit pls
+#define COUNTS_PER_REV 5  //edit pls
 
 // Wheel circumference in cm.
-// We will use this to calculate forward/backward distance traveled 
+// We will use this to calculate forward/backward distance traveled
 // by taking revs * WHEEL_CIRC
 
 #define WHEEL_CIRC 20
@@ -30,13 +30,13 @@ volatile TDirection dir;
 #define TRIG_PIN 25
 #define ECHO_PIN 26
 
-#define TCS3200_S0  30// Choose your pin numbers
-#define TCS3200_S1  31// Choose your pin numbers
-#define TCS3200_S2  32// Choose your pin numbers
-#define TCS3200_S3  33// Choose your pin numbers
-#define TCS3200_OUT 34// Choose your pin numbers
+#define TCS3200_S0 30   // Choose your pin numbers
+#define TCS3200_S1 31   // Choose your pin numbers
+#define TCS3200_S2 32   // Choose your pin numbers
+#define TCS3200_S3 33   // Choose your pin numbers
+#define TCS3200_OUT 34  // Choose your pin numbers
 
-int offset=0;
+int offset = 0;
 /*
  *    Alex's State Variables
  */
@@ -45,13 +45,13 @@ volatile float alexCirc = 57.93;
 
 // Store the ticks from Alex's left and
 // right encoders.
-volatile unsigned long leftForwardTicks; 
+volatile unsigned long leftForwardTicks;
 volatile unsigned long rightForwardTicks;
 volatile unsigned long leftReverseTicks;
 volatile unsigned long rightReverseTicks;
 
 // left and right encoder ticks for turning
-volatile unsigned long leftForwardTicksTurns; 
+volatile unsigned long leftForwardTicksTurns;
 volatile unsigned long rightForwardTicksTurns;
 volatile unsigned long leftReverseTicksTurns;
 volatile unsigned long rightReverseTicksTurns;
@@ -64,30 +64,29 @@ unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
 
-int angSpeed = 70; // 0-100% speed (uint8_t if you want memory efficiency)
-int distSpeed = 100;  // 0-100% speed (uint8_t if you want memory efficiency)
+int angSpeed = 70;       // 0-100% speed (uint8_t if you want memory efficiency)
+int distSpeed = 100;     // 0-100% speed (uint8_t if you want memory efficiency)
 float targetAngle = 40;  // Target angle in degrees (float for precision)
-float targetDist = 5;  // Target distance in cm (volatile if you want ISR safety)
+float targetDist = 5;    // Target distance in cm (volatile if you want ISR safety)
 
 unsigned long lastUltrasonicReport = 0;
 unsigned long currentMillis;
-unsigned int ultramode=0;
+unsigned int ultramode = 0;
 
-Servo servo1; //  pin 9
-Servo servo2; // pin 10
-Servo servo3; // pin 46
+Servo servo1;  //  pin 9
+Servo servo2;  // pin 10
+Servo servo3;  // pin 46
 /*
  * 
  * Alex Communication Routines.
  * 
  */
-void left(float ang, float speed){
-  if(ang == 0){
+void left(float ang, float speed) {
+  if (ang == 0) {
     stop();
     dbprintf("ang 0 detected");
-  }
-    else{
-    deltaTicks=computeDeltaTicks(ang);
+  } else {
+    deltaTicks = computeDeltaTicks(ang);
 
     targetTicks = leftReverseTicksTurns + deltaTicks;
     /*
@@ -97,18 +96,16 @@ void left(float ang, float speed){
     Serial.println(targetTicks);
     */
     //dir=(TDirection) LEFT;
-    ccw(ang,speed);
-    }
-
+    ccw(ang, speed);
+  }
 }
-void right(float ang, float speed){
-  if(ang == 0){
+void right(float ang, float speed) {
+  if (ang == 0) {
     stop();
     dbprintf("ang 0 detected");
-  }
-  else{
+  } else {
     deltaTicks = computeDeltaTicks(ang);
-  
+
     targetTicks = rightReverseTicksTurns + deltaTicks;
     /*
     Serial.println("THis is the delta ticks:");
@@ -116,46 +113,42 @@ void right(float ang, float speed){
     Serial.println("THis is the target ticks:");
     Serial.println(targetTicks);*/
     //dir=(TDirection) RIGHT;
-    cw(ang,speed);
+    cw(ang, speed);
   }
 }
 
 // New function to estimate number of wheel ticks
 // needed to turn an angle
-unsigned long computeDeltaTicks(float ang)
-{
-    // We will assume that angular distance moved = linear distance moved in one wheel
-    // revolution. This is probably incorrect but simplifies calculation.
-    // # of wheel revs to make one full 360 turn is vincentCirc / WHEEL_CIRC
-    // This is for 360 degrees. For ang degrees it will be (ang * vincentCirc) / (360 * WHEEL_CIRC)
-    // To get ticks, we multiply by COUNTS_PER_REV.
+unsigned long computeDeltaTicks(float ang) {
+  // We will assume that angular distance moved = linear distance moved in one wheel
+  // revolution. This is probably incorrect but simplifies calculation.
+  // # of wheel revs to make one full 360 turn is vincentCirc / WHEEL_CIRC
+  // This is for 360 degrees. For ang degrees it will be (ang * vincentCirc) / (360 * WHEEL_CIRC)
+  // To get ticks, we multiply by COUNTS_PER_REV.
 
-    unsigned long ticks = (unsigned long) (round((ang * alexCirc * 5) / (360.0 * 19.8))); //(10*94.3*4)/(360*20.42)=0.513
-   /* Serial.println("THis is the after computing:");
+  unsigned long ticks = (unsigned long)(round((ang * alexCirc * 5) / (360.0 * 19.8)));  //(10*94.3*4)/(360*20.42)=0.513
+                                                                                        /* Serial.println("THis is the after computing:");
     Serial.println(targetTicks);*/
-    return ticks;
-}
- 
-TResult readPacket(TPacket *packet)
-{
-    // Reads in data from the serial port and
-    // deserializes it.Returns deserialized
-    // data in "packet".
-    
-    char buffer[PACKET_SIZE];
-    int len;
-
-    len = readSerial(buffer);
-
-    if(len == 0)
-      return PACKET_INCOMPLETE;
-    else
-      return deserialize(buffer, len, packet);
-    
+  return ticks;
 }
 
-void sendStatus()
-{
+TResult readPacket(TPacket *packet) {
+  // Reads in data from the serial port and
+  // deserializes it.Returns deserialized
+  // data in "packet".
+
+  char buffer[PACKET_SIZE];
+  int len;
+
+  len = readSerial(buffer);
+
+  if (len == 0)
+    return PACKET_INCOMPLETE;
+  else
+    return deserialize(buffer, len, packet);
+}
+
+void sendStatus() {
   // Implement code to send back a packet containing key
   // information like leftTicks, rightTicks, leftRevs, rightRevs
   // forwardDist and reverseDist
@@ -163,23 +156,23 @@ void sendStatus()
   // packetType and command files accordingly, then use sendResponse
   // to send out the packet. See sendMessage on how to use sendResponse.
   //
-    TPacket statusPacket; // Create new packet
-    statusPacket.packetType = PACKET_TYPE_RESPONSE; // Set packet type
-    statusPacket.command= RESP_STATUS; // Set command field
-    
-    // Populate params array
-    statusPacket.params[0] = leftForwardTicks;
-    statusPacket.params[1] = rightForwardTicks;
-    statusPacket.params[2] = leftReverseTicks;
-    statusPacket.params[3] = rightReverseTicks;
-    statusPacket.params[4] = leftForwardTicksTurns;
-    statusPacket.params[5] = rightForwardTicksTurns;
-    statusPacket.params[6] = leftReverseTicksTurns;
-    statusPacket.params[7] = rightReverseTicksTurns;
-    statusPacket.params[8] = forwardDist;
-    statusPacket.params[9] = reverseDist;
+  TPacket statusPacket;                            // Create new packet
+  statusPacket.packetType = PACKET_TYPE_RESPONSE;  // Set packet type
+  statusPacket.command = RESP_STATUS;              // Set command field
 
-    sendResponse(&statusPacket);
+  // Populate params array
+  statusPacket.params[0] = leftForwardTicks;
+  statusPacket.params[1] = rightForwardTicks;
+  statusPacket.params[2] = leftReverseTicks;
+  statusPacket.params[3] = rightReverseTicks;
+  statusPacket.params[4] = leftForwardTicksTurns;
+  statusPacket.params[5] = rightForwardTicksTurns;
+  statusPacket.params[6] = leftReverseTicksTurns;
+  statusPacket.params[7] = rightReverseTicksTurns;
+  statusPacket.params[8] = forwardDist;
+  statusPacket.params[9] = reverseDist;
+
+  sendResponse(&statusPacket);
 }
 void dbprintf(const char *format, ...) {
   va_list args;
@@ -188,69 +181,61 @@ void dbprintf(const char *format, ...) {
   vsprintf(buffer, format, args);
   sendMessage(buffer);
 }
-void sendMessage(const char *message)
-{
+void sendMessage(const char *message) {
   // Sends text messages back to the Pi. Useful
   // for debugging.
-  
+
   TPacket messagePacket;
-  messagePacket.packetType=PACKET_TYPE_MESSAGE;
+  messagePacket.packetType = PACKET_TYPE_MESSAGE;
   strncpy(messagePacket.data, message, MAX_STR_LEN);
   sendResponse(&messagePacket);
 }
 
-void sendBadPacket()
-{
+void sendBadPacket() {
   // Tell the Pi that it sent us a packet with a bad
   // magic number.
-  
+
   TPacket badPacket;
   badPacket.packetType = PACKET_TYPE_ERROR;
   badPacket.command = RESP_BAD_PACKET;
   sendResponse(&badPacket);
-  
 }
 
-void sendBadChecksum()
-{
+void sendBadChecksum() {
   // Tell the Pi that it sent us a packet with a bad
   // checksum.
-  
+
   TPacket badChecksum;
   badChecksum.packetType = PACKET_TYPE_ERROR;
   badChecksum.command = RESP_BAD_CHECKSUM;
-  sendResponse(&badChecksum);  
+  sendResponse(&badChecksum);
 }
 
-void sendBadCommand()
-{
+void sendBadCommand() {
   // Tell the Pi that we don't understand its
   // command sent to us.
-  
+
   TPacket badCommand;
-  badCommand.packetType=PACKET_TYPE_ERROR;
-  badCommand.command=RESP_BAD_COMMAND;
+  badCommand.packetType = PACKET_TYPE_ERROR;
+  badCommand.command = RESP_BAD_COMMAND;
   sendResponse(&badCommand);
 }
 
-void sendBadResponse()
-{
+void sendBadResponse() {
   TPacket badResponse;
   badResponse.packetType = PACKET_TYPE_ERROR;
   badResponse.command = RESP_BAD_RESPONSE;
   sendResponse(&badResponse);
 }
 
-void sendOK()
-{
+void sendOK() {
   TPacket okPacket;
   okPacket.packetType = PACKET_TYPE_RESPONSE;
   okPacket.command = RESP_OK;
-  sendResponse(&okPacket);  
+  sendResponse(&okPacket);
 }
 
-void sendResponse(TPacket *packet)
-{
+void sendResponse(TPacket *packet) {
   // Takes a packet, serializes it then sends it out
   // over the serial port.
   char buffer[PACKET_SIZE];
@@ -267,39 +252,36 @@ void sendResponse(TPacket *packet)
  * 
  */
 // Enable pull up resistors on pins 18 and 19
-void enablePullups()
-{
+void enablePullups() {
   // Use bare-metal to enable the pull-up resistors on pins
   // 19 and 18. These are pins PD2 and PD3 respectively.
-  // We set bits 4 and 3 in DDRD to 0 to make them inputs. 
-  DDRD&=~(0b00001100); //input for PD2 & 3
-  PORTD|=0b00001100;  //pullup
+  // We set bits 4 and 3 in DDRD to 0 to make them inputs.
+  DDRD &= ~(0b00001100);  //input for PD2 & 3
+  PORTD |= 0b00001100;    //pullup
 }
 
-ISR(INT3_vect){
+ISR(INT3_vect) {
   leftISR();
 }
 
-ISR(INT2_vect){
+ISR(INT2_vect) {
   rightISR();
 }
 // Functions to be called by INT2 and INT3 ISRs.
-void leftISR()
-{
-  if(dir==FORWARD){
+void leftISR() {
+  if (dir == FORWARD) {
     leftForwardTicks++;
-    forwardDist = (unsigned long) ((float) leftForwardTicks / COUNTS_PER_REV * WHEEL_CIRC);
-  }else if(dir==BACKWARD){
+    forwardDist = (unsigned long)((float)leftForwardTicks / COUNTS_PER_REV * WHEEL_CIRC);
+  } else if (dir == BACKWARD) {
     leftReverseTicks++;
-    reverseDist = (unsigned long) ((float) leftReverseTicks / COUNTS_PER_REV * WHEEL_CIRC);
-  }else if(dir==LEFT){
+    reverseDist = (unsigned long)((float)leftReverseTicks / COUNTS_PER_REV * WHEEL_CIRC);
+  } else if (dir == LEFT) {
     leftReverseTicksTurns++;
-    
-  }else if(dir==RIGHT){
+
+  } else if (dir == RIGHT) {
     leftForwardTicksTurns++;
-    
   }
-/*
+  /*
   Serial.print("LEFTturnsreverse: ");
   Serial.println(leftReverseTicksTurns);
   Serial.print("LEFTreverse: ");
@@ -307,19 +289,17 @@ void leftISR()
   */
 }
 
-void rightISR()
-{
-  if(dir==FORWARD){
+void rightISR() {
+  if (dir == FORWARD) {
     rightForwardTicks++;
-  }else if(dir==BACKWARD){
+  } else if (dir == BACKWARD) {
     rightReverseTicks++;
-  }else if(dir==LEFT){
+  } else if (dir == LEFT) {
     rightForwardTicksTurns++;
-  }else if(dir==RIGHT){
+  } else if (dir == RIGHT) {
     rightReverseTicksTurns++;
-   
   }
-/*
+  /*
   Serial.print("RIGHTreverseTurns: ");
   Serial.println(rightReverseTicksTurns);
     Serial.print("RIghtreverse: ");
@@ -329,14 +309,13 @@ void rightISR()
 
 // Set up the external interrupt pins INT2 and INT3
 // for falling edge triggered. Use bare-metal.
-void setupEINT()
-{
+void setupEINT() {
   // Use bare-metal to configure pins 18 and 19 to be
   // falling edge triggered. Remember to enable
   // the INT2 and INT3 interrupts.
   // Hint: Check pages 110 and 111 in the ATmega2560 Datasheet.
-  EIMSK=0b00001100; //both int2 & int3 enabled
-  EICRA=0b10100000; //both falling edge INT2 & INT3
+  EIMSK = 0b00001100;  //both int2 & int3 enabled
+  EICRA = 0b10100000;  //both falling edge INT2 & INT3
 }
 
 // Implement the external interrupt ISRs below.
@@ -350,15 +329,14 @@ void setupEINT()
  * Setup and start codes for serial communications
  * 
  */
-// Set up the serial connection. For now we are using 
+// Set up the serial connection. For now we are using
 // Arduino Wiring, you will replace this later
 // with bare-metal code.
-void setupSerial()
-{
+void setupSerial() {
   // To replace later with bare-metal.
   Serial.begin(9600);
   // Change Serial to Serial2/Serial3/Serial4 in later labs when using the other UARTs
-/*  if (!tcs.begin()) {  // <- THIS LINE INITIALIZES I2C AND THE SENSOR
+  /*  if (!tcs.begin()) {  // <- THIS LINE INITIALIZES I2C AND THE SENSOR
     dbprintf("ERROR: Sensor not found!");
     while (1);
     delay(50);
@@ -370,25 +348,22 @@ void setupSerial()
 // Arduino wiring and this function is empty. We will
 // replace this later with bare-metal code.
 
-void startSerial()
-{
+void startSerial() {
   // Empty for now. To be replaced with bare-metal code
   // later on.
-  
 }
 
 // Read the serial port. Returns the read character in
-// ch if available. Also returns TRUE if ch is valid. 
+// ch if available. Also returns TRUE if ch is valid.
 // This will be replaced later with bare-metal code.
 
-int readSerial(char *buffer)
-{
+int readSerial(char *buffer) {
 
-  int count=0;
+  int count = 0;
 
   // Change Serial to Serial2/Serial3/Serial4 in later labs when using other UARTs
 
-  while(Serial.available())
+  while (Serial.available())
     buffer[count++] = Serial.read();
 
   return count;
@@ -397,8 +372,7 @@ int readSerial(char *buffer)
 // Write to the serial port. Replaced later with
 // bare-metal code
 
-void writeSerial(const char *buffer, int len)
-{
+void writeSerial(const char *buffer, int len) {
   Serial.write(buffer, len);
   // Change Serial to Serial2/Serial3/Serial4 in later labs when using other UARTs
 }
@@ -409,24 +383,22 @@ void writeSerial(const char *buffer, int len)
  */
 
 // Clears all our counters
-void clearCounters()
-{
-  leftForwardTicks=0;
-  rightForwardTicks=0;
-  leftReverseTicks=0;
-  rightReverseTicks=0;
-  leftForwardTicksTurns=0;
-  rightForwardTicksTurns=0;
-  leftReverseTicksTurns=0;
-  rightReverseTicksTurns=0;
-  forwardDist=0;
-  reverseDist=0; 
+void clearCounters() {
+  leftForwardTicks = 0;
+  rightForwardTicks = 0;
+  leftReverseTicks = 0;
+  rightReverseTicks = 0;
+  leftForwardTicksTurns = 0;
+  rightForwardTicksTurns = 0;
+  leftReverseTicksTurns = 0;
+  rightReverseTicksTurns = 0;
+  forwardDist = 0;
+  reverseDist = 0;
   targetTicks = 0;
 }
 
 // Clears one particular counter
-void clearOneCounter(int which)
-{
+void clearOneCounter(int which) {
   clearCounters();
   /*
   switch(which)
@@ -462,22 +434,21 @@ void clearOneCounter(int which)
 }
 // Intialize Alex's internal states
 
-void initializeState()
-{
+void initializeState() {
   clearCounters();
 }
 
-int getDistance(){  // Initialize sensor
+int getDistance() {  // Initialize sensor
   digitalWrite(TRIG_PIN, LOW);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-    // Trigger pulse
+  // Trigger pulse
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
 
-    // Get distance
-  int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset; //currently 0
+  // Get distance
+  int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset;  //currently 0
   return distance_cm;
 }
 
@@ -514,11 +485,11 @@ void setupTCS3200() {
   pinMode(TCS3200_S2, OUTPUT);
   pinMode(TCS3200_S3, OUTPUT);
   pinMode(TCS3200_OUT, INPUT);
-  
+
   // Set frequency scaling to 20% (you can adjust this)
   digitalWrite(TCS3200_S0, HIGH);
-  digitalWrite(TCS3200_S1, LOW); //HIGH HIGH 100, LOW HIGH 2, HIGH LOW 20
-  
+  digitalWrite(TCS3200_S1, LOW);  //HIGH HIGH 100, LOW HIGH 2, HIGH LOW 20
+
   dbprintf("TCS3200 ready!");
 }
 
@@ -528,32 +499,30 @@ void colourmode() {
   digitalWrite(TCS3200_S3, LOW);
   delay(100);
   int red = pulseIn(TCS3200_OUT, LOW);
-  
+
   // Read green component
   digitalWrite(TCS3200_S2, HIGH);
   digitalWrite(TCS3200_S3, HIGH);
   delay(100);
   int green = pulseIn(TCS3200_OUT, LOW);
-  
+
   // Read blue component
   digitalWrite(TCS3200_S2, LOW);
   digitalWrite(TCS3200_S3, HIGH);
   delay(100);
   int blue = pulseIn(TCS3200_OUT, LOW);
-  
+
   // Determine dominant color
   if (red < green && red < blue) {  // Lower value means stronger color
     dbprintf("RED");
- //Serial.print("RED");
-  } 
-  else if (green < red && green < blue) {
+    //Serial.print("RED");
+  } else if (green < red && green < blue) {
     dbprintf("GREEN");
-  //   Serial.print("GREEN");
-  } 
-  else {
+    //   Serial.print("GREEN");
+  } else {
     dbprintf("NONE");
-   //  Serial.print("NONE");
-  }/*
+    //  Serial.print("NONE");
+  } /*
   Serial.print("red ");
  Serial.print(red);
 
@@ -563,163 +532,150 @@ void colourmode() {
   Serial.print("blue ");
   Serial.print(blue);
   Serial.println(" ");*/
-}// this is for tcs3200
+}  // this is for tcs3200
 
-void cammode(){;}
+void cammode() {
+  ;
+}
 
-void handleCommand(TPacket *command)
-{
-  switch(command->command)
-  {
+void handleCommand(TPacket *command) {
+  switch (command->command) {
     // For movement commands, param[0] = distance, param[1] = speed.
     case COMMAND_FORWARD:
-        sendOK();
-        forward(targetDist, distSpeed);
-      break;
-
-     case COMMAND_REVERSE:
-        sendOK();
-        backward(targetDist, distSpeed);
-      break;
-
-     case COMMAND_TURN_LEFT:
-        sendOK();
-        left(targetAngle, angSpeed);
-      break;
-
-     case COMMAND_TURN_RIGHT:       
-        sendOK();
-        right(targetAngle, angSpeed);
-      break;
-     
-     case COMMAND_GEAR_1:
-        sendOK();
-        distSpeed=50;
-        angSpeed=70;
-        targetAngle=20;
-        targetDist=2;
-      break;
-     
-     case COMMAND_GEAR_2:
-     sendOK();
-        distSpeed=70;
-        angSpeed=70;
-        targetAngle=40;
-        targetDist=5;
-      break;
-     
-     case COMMAND_GEAR_3:
-     sendOK();
-        distSpeed=100;
-        angSpeed=70;
-        targetAngle=90;
-        targetDist=10;
-      break;
-     
-     case COMMAND_ULTRA:
       sendOK();
-        ultramode^=1;
-      break;
-     
-     case COMMAND_COLOUR:
-     sendOK();
-     //  colourmode();
-      break;
-     
-     case COMMAND_CAM:
-        sendOK();
-        cammode();
-      break;
-     
-     case COMMAND_STOP:
-          sendOK();
-          stop();
+      forward(targetDist, distSpeed);
       break;
 
-     case COMMAND_SERVO_OPEN:
-        sendOK();
-        //servo_angle(180,0);
-	    servo1.write(130);
-	    servo2.write(20);
+    case COMMAND_REVERSE:
+      sendOK();
+      backward(targetDist, distSpeed);
+      break;
+
+    case COMMAND_TURN_LEFT:
+      sendOK();
+      left(targetAngle, angSpeed);
+      break;
+
+    case COMMAND_TURN_RIGHT:
+      sendOK();
+      right(targetAngle, angSpeed);
+      break;
+
+    case COMMAND_GEAR_1:
+      sendOK();
+      distSpeed = 50;
+      angSpeed = 70;
+      targetAngle = 20;
+      targetDist = 2;
+      break;
+
+    case COMMAND_GEAR_2:
+      sendOK();
+      distSpeed = 70;
+      angSpeed = 70;
+      targetAngle = 40;
+      targetDist = 5;
+      break;
+
+    case COMMAND_GEAR_3:
+      sendOK();
+      distSpeed = 100;
+      angSpeed = 70;
+      targetAngle = 90;
+      targetDist = 10;
+      break;
+
+    case COMMAND_ULTRA:
+      sendOK();
+      ultramode ^= 1;
+      break;
+
+    case COMMAND_COLOUR:
+      sendOK();
+      //  colourmode();
+      break;
+
+    case COMMAND_CAM:
+      sendOK();
+      cammode();
+      break;
+
+    case COMMAND_STOP:
+      sendOK();
+      stop();
+      break;
+
+    case COMMAND_SERVO_OPEN:
+      sendOK();
+      //servo_angle(180,0);
+      servo1.write(130);
+      servo2.write(20);
       dbprintf("servo opened");
       break;
 
-     case COMMAND_SERVO_CLOSE:   
-        sendOK();
-//        servo_angle(0, 180); //do adjust
-	      servo1.write(30);
-	      servo2.write(90);
-        dbprintf("servo closed");
+    case COMMAND_SERVO_CLOSE:
+      sendOK();
+      //        servo_angle(0, 180); //do adjust
+      servo1.write(30);
+      servo2.write(90);
+      dbprintf("servo closed");
       break;
 
-     case COMMAND_TURN_AND_OPEN_TRAP:
+    case COMMAND_TURN_AND_OPEN_TRAP:
       sendOK();
-      backward(2,100);
-      left(90,100);
-      backward(2,100);
+      backward(2, 100);
+      left(90, 100);
+      backward(2, 100);
       stop();
       servo3.write(0);
       dbprintf("trap opened, start shaking");
       break;
 
-     case COMMAND_SHAKE:
-        dbprintf("SHAKING");
-        sendOK();
-        forward(2,100);
-        backward(2,100);
-        stop();
+    case COMMAND_SHAKE:
+      dbprintf("SHAKING");
+      sendOK();
+      forward(2, 100);
+      backward(2, 100);
+      stop();
       break;
 
-     case COMMAND_GET_STATS:
-        sendStatus();
-        sendOK();
+    case COMMAND_GET_STATS:
+      sendStatus();
+      sendOK();
       break;
 
-     case COMMAND_CLEAR_STATS:
-        clearOneCounter(command->params[0]);
-        sendOK();
+    case COMMAND_CLEAR_STATS:
+      clearOneCounter(command->params[0]);
+      sendOK();
       break;
 
-      default:
-        sendBadCommand();
+    default:
+      sendBadCommand();
   }
 }
 
-void waitForHello()
-{
-  int exit=0;
+void waitForHello() {
+  int exit = 0;
 
-  while(!exit)
-  {
+  while (!exit) {
     TPacket hello;
     TResult result;
-    
-    do
-    {
+
+    do {
       result = readPacket(&hello);
     } while (result == PACKET_INCOMPLETE);
 
-    if(result == PACKET_OK)
-    {
-      if(hello.packetType == PACKET_TYPE_HELLO)
-      {
-     
-
+    if (result == PACKET_OK) {
+      if (hello.packetType == PACKET_TYPE_HELLO) {
         sendOK();
-        exit=1;
-      }
-      else
+        exit = 1;
+      } else
         sendBadResponse();
-    }
-    else
-      if(result == PACKET_BAD)
-      {
-        sendBadPacket();
-      }
-      else
-        if(result == PACKET_CHECKSUM_BAD)
-          sendBadChecksum();
-  } // !exit
+    } else if (result == PACKET_BAD) {
+      sendBadPacket();
+    } else if (result == PACKET_CHECKSUM_BAD)
+      sendBadChecksum();
+  }  // !exit
 }
 /*
 void init_servo(){
@@ -753,10 +709,15 @@ void setup() {
   //init_servo();
   servo1.attach(9);
   servo2.attach(10);
+  servo3.attach(46);
   servo1.write(130);
   servo2.write(20);
   servo3.write(75);
-/*
+
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  digitalWrite(TRIG_PIN, LOW);
+  /*
   for(int i=0; i<50 ;i++){
   servo1.write(130);
   servo2.write(20);
@@ -768,16 +729,14 @@ void setup() {
   ultramode();
   delay(500);
   }
-  */ //this is for ultrasonic testing
+  */
+  //this is for ultrasonic testing
   initializeState();
   sei();
-  
 }
 
-void handlePacket(TPacket *packet)
-{
-  switch(packet->packetType)
-  {
+void handlePacket(TPacket *packet) {
+  switch (packet->packetType) {
     case PACKET_TYPE_COMMAND:
       handleCommand(packet);
       break;
@@ -802,29 +761,22 @@ void loop() {
 
   // Uncomment for Week 9 Studio 2
   // Process incoming packets from the Pi
-  TPacket recvPacket; // This holds commands from the Pi
+  TPacket recvPacket;  // This holds commands from the Pi
   TResult result = readPacket(&recvPacket);
-  
+
   if (result == PACKET_OK) {
     handlePacket(&recvPacket);  // Triggers handleCommand -> which triggers all action functions
-  } 
-  else if (result == PACKET_BAD) {
+  } else if (result == PACKET_BAD) {
     sendBadPacket();
-  }
-  else if (result == PACKET_CHECKSUM_BAD) {
+  } else if (result == PACKET_CHECKSUM_BAD) {
     sendBadChecksum();
   }
- //test movements
-      
+  //test movements
   //forward(100, 40);
   //backward(20, 40);
   //stop();
   //left(100, 40);
-  
   //right(10, 40);
-    
-  
-  
   //
   // Check if forward/backward movement is complete
   if (deltaDist > 0) {
@@ -833,23 +785,21 @@ void loop() {
         deltaDist = 0;
         newDist = 0;
         stop();
-        dir=(TDirection) STOP;
+        dir = (TDirection)STOP;
       }
-    }
-    else if (dir == BACKWARD) {
+    } else if (dir == BACKWARD) {
       if (reverseDist > newDist) {
         deltaDist = 0;
         newDist = 0;
         stop();
-        dir=(TDirection) STOP;
+        dir = (TDirection)STOP;
       }
-    } else if((Tdir)dir == STOP)
-      {
-        deltaDist=0;
-        newDist=0;
-        stop();
-        dir=(TDirection) STOP;
-      }
+    } else if ((Tdir)dir == STOP) {
+      deltaDist = 0;
+      newDist = 0;
+      stop();
+      dir = (TDirection)STOP;
+    }
   }
 
   // Check if rotation (left/right) is complete
@@ -859,32 +809,31 @@ void loop() {
         deltaTicks = 0;
         targetTicks = 0;
         stop();
-        dir=(TDirection) STOP;
+        dir = (TDirection)STOP;
         //Serial.println("target ticks reached");
       }
-    }
-    else if (dir == RIGHT) {
+    } else if (dir == RIGHT) {
       if (rightReverseTicksTurns >= targetTicks) {
         deltaTicks = 0;
         targetTicks = 0;
         stop();
-        dir=(TDirection) STOP;
+        dir = (TDirection)STOP;
         //Serial.println("target ticks reached");
       }
-    } else if ((Tdir)dir == STOP)
-      {
-          deltaTicks = 0;
-          targetTicks = 0;
-          stop();
-          dir=(TDirection) STOP;
-      }
+    } else if ((Tdir)dir == STOP) {
+      deltaTicks = 0;
+      targetTicks = 0;
+      stop();
+      dir = (TDirection)STOP;
+    }
   }
-   // Periodically report ultrasonic distance
-  if(ultramode==1){
+  // Periodically report ultrasonic distance
+  if (ultramode == 1) {
     currentMillis = millis();
     if (currentMillis - lastUltrasonicReport >= 200) {
-    int distance = getDistance();
-    dbprintf("DIST:%d", distance);
-    lastUltrasonicReport = currentMillis;
+      int distance = getDistance();
+      dbprintf("DIST:%d", distance);
+      lastUltrasonicReport = currentMillis;
+    }
   }
 }
