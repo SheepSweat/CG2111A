@@ -34,21 +34,22 @@ typedef enum
 // param[1] = speed
 typedef enum
 {
-  COMMAND_FORWARD = 0,
-  COMMAND_REVERSE = 1,
-  COMMAND_TURN_LEFT = 2,
-  COMMAND_TURN_RIGHT = 3,
-  COMMMAND_SETTING_1 = 4,
-  COMMMAND_SETTING_2 = 5,
-  COMMMAND_SETTING_3 = 6,
-  COMMAND_ULTRASONIC = 7,
-  COMMAND_COLOUR = 8,
-  COMMAND_CAMERA = 9,
-  COMMAND_SERVO_OPEN = 10,
-  COMMAND_SERVO_CLOSE = 11,
-  COMMAND_GET_STATS = 12,
-  COMMAND_CLEAR_STATS = 13,
-  COMMAND_STOP = 14
+        COMMAND_FORWARD = 0,    //w
+        COMMAND_REVERSE = 1,    //s
+        COMMAND_TURN_LEFT = 2,  //a
+        COMMAND_TURN_RIGHT = 3, //d
+        COMMAND_GEAR_1 = 4,     //f
+        COMMAND_GEAR_2 = 5,     //g
+        COMMAND_GEAR_3 = 6,     //h
+        COMMAND_ULTRA = 7,      //z
+        COMMAND_COLOUR = 8,     //c
+        COMMAND_CAM = 9,        //x     
+        COMMAND_STOP = 10,      //y
+        COMMAND_SERVO_OPEN = 11,        //q
+        COMMAND_SERVO_CLOSE = 12,       //e
+        COMMAND_CLEAR_STATS = 13,       //t
+        COMMAND_GET_STATS = 14  //r
+
 } TCommandType;
 #endif
 
