@@ -9,10 +9,18 @@
 #include "constants.h"
 
 // to remove need for enter
-#include <conio.h>
+//#include <conio.h>
+#include <stdio.h>
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <time.h>
 
 // Tells us that the network is running.
 static volatile int networkActive=0;
+static volatile clock_t last_time=0;
+static volatile clock_t current_time;
+
 
 void handleError(const char *buffer)
 {
@@ -157,25 +165,59 @@ void flushInput()
 // 	scanf("%d %d", &params[0], &params[1]);
 // 	flushInput();
 // }
+// char getch() {
+//     struct termios oldattr, newattr;
+//     char ch;
+//     tcgetattr(STDIN_FILENO, &oldattr);
+//     newattr = oldattr;
+//     newattr.c_lflag &= ~(ICANON | ECHO);
+//     tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+//     ch = getchar();
+//     tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
+//     return ch;
+// }
+void enable_raw_mode() {
+    struct termios newt;
+    tcgetattr(STDIN_FILENO, &newt);
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+}
+
+void disable_raw_mode() {
+    struct termios newt;
+    tcgetattr(STDIN_FILENO, &newt);
+    newt.c_lflag |= (ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+}
+
+void set_nonblocking_mode() {
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+}
 
 void *writerThread(void *conn)
 {
 	int quit=0;
+    enable_raw_mode();
+   set_nonblocking_mode();
+    printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, q=Servo open, e=Servo close,  r=get stats, t=clear data, y=stop v=exit)\n");
 
 	while(!quit)
 	{
 		char ch;
-		printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, e=Servo open, q=Servo close,  r=get stats, t=clear data, y=stop v=exit)\n");
-		if(_kbhit()){
-			ch _getch();
-			printf("You pressed: %c\n",ch);
-		}
-
+		// ch = getch();
+//		std::cout << "You typed: " << static_cast<char>(ch) << std::endl;
+//	scanf("%c", &ch);
+		 if (read(STDIN_FILENO, &ch, 1) > 0) {
+           	 printf("You typed: %c\n", ch);
+		 current_time =clock();
+		double time_diff = (double)(current_time - last_time)/CLOCKS_PER_SEC;
+		if (last_time ==0 || time_diff > 3){
 		// Purge extraneous characters from input stream
-		flushInput();
+		//flushInput();
 
 		char buffer[10];
-		int32_t params[2];
+//		int32_t params[2];
 
 		buffer[0] = NET_COMMAND_PACKET;
 		switch(ch)
@@ -256,11 +298,17 @@ void *writerThread(void *conn)
 
 			default:
 				printf("BAD COMMAND\n");
+				}
+			last_time = current_time;
+			}
+		else {
+		printf("Command '%c' ignored (too soon)!\n", ch);
 		}
 	}
+}
 
 	printf("Exiting keyboard thread\n");
-
+	disable_raw_mode();
     /* TODO: Stop the client loop and call EXIT_THREAD */
     stopClient();
     EXIT_THREAD(conn);
@@ -272,7 +320,7 @@ void *writerThread(void *conn)
 
 /* TODO: #define filenames for the client private key, certificatea,
    CA filename, etc. that you need to create a client */
-#define SERVER_NAME "192.168.239.253"
+#define SERVER_NAME "172.20.10.10"
 #define CA_CERT_FNAME "signing.pem"
 #define PORT_NUM 5001
 #define CLIENT_CERT_FNAME "laptop.crt"
