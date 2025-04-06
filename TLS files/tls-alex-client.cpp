@@ -200,7 +200,7 @@ void *writerThread(void *conn)
 	int quit=0;
     enable_raw_mode();
    set_nonblocking_mode();
-    printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, q=Servo open, e=Servo close,  r=get stats, t=clear data, y=stop v=exit)\n");
+    printf("Command (w=forward, s=reverse, a=turn left, d=turn right, f=setting1, g=setting2, h=setting3, z=ultrasonic, c=colour, x=RPi camera, q=Servo open, e=Servo close,  r=get stats, t=clear data, y=stop, o=open trap, p=shake v=exit)\n");
 
 	while(!quit)
 	{
@@ -254,6 +254,10 @@ void *writerThread(void *conn)
 			case 'V':
 			case 'y':
 			case 'Y':
+			case 'o':
+			case 'O':
+			case 'p':
+			case 'P':
 						buffer[1] = ch;
 						sendData(conn,buffer,sizeof(buffer));
 						break;

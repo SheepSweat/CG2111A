@@ -48,7 +48,9 @@ typedef enum
         COMMAND_SERVO_OPEN = 11,        //q
         COMMAND_SERVO_CLOSE = 12,       //e
         COMMAND_CLEAR_STATS = 13,       //t
-        COMMAND_GET_STATS = 14  //r
+        COMMAND_GET_STATS = 14,  //r
+        COMMAND_TURN_AND_OPEN_TRAP = 15, //o
+        COMMAND_SHAKE = 16 //p
 
 } TCommandType;
 #endif
