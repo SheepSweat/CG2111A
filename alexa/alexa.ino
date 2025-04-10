@@ -456,10 +456,10 @@ void getDistance() {  // Initialize sensor
 
 void colourmode() {
   if (!tcs.begin()) {
-    dbprintf("COLOR:INIT_FAIL");
+    dbprintf("COLOR:INIT_FAIL!\n");
     return;
   }
-
+  dbprintf("COLOR:READY TO BE NIGGED!\n");
   uint16_t r, g, b, c;
   tcs.getRawData(&r, &g, &b, &c);
 
