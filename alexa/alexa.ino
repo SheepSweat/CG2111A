@@ -66,8 +66,8 @@ unsigned long deltaTicks;
 unsigned long targetTicks;
 
 int angSpeed = 100;       // 0-100% speed (uint8_t if you want memory efficiency)
-int distSpeed = 100;     // 0-100% speed (uint8_t if you want memory efficiency)
-float targetAngle = 40;  // Target angle in degrees (float for precision)
+int distSpeed = 70;     // 0-100% speed (uint8_t if you want memory efficiency)
+float targetAngle = 45;  // Target angle in degrees (float for precision)
 float targetDist = 5;    // Target distance in cm (volatile if you want ISR safety)
 
 unsigned long lastUltrasonicReport = 0;
@@ -450,7 +450,7 @@ void getDistance() {  // Initialize sensor
 
   // Get distance
   int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset;  //currently 0
-  dbprintf("DIST:%d", distance_cm);
+  dbprintf("DIST:%d\n", distance_cm);
 }
 
 
