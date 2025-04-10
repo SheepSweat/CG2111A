@@ -23,26 +23,26 @@ void move(float speed, int direction)
   motorBR.setSpeed(speed_scaled);
 
   switch(direction){
-      case BACK:
-        motorFL.run(BACKWARD);
+      case GO:
+        motorFL.run(FORWARD);
         motorFR.run(FORWARD);
         motorBL.run(FORWARD);
         motorBR.run(FORWARD); 
       break;
-      case GO:
-        motorFL.run(FORWARD);
+      case BACK:
+        motorFL.run(BACKWARD);
         motorFR.run(BACKWARD);
         motorBL.run(BACKWARD);
         motorBR.run(BACKWARD); 
       break;
       case CW:
-        motorFL.run(BACKWARD);
+        motorFL.run(FORWARD);
         motorFR.run(FORWARD);
         motorBL.run(BACKWARD);
         motorBR.run(BACKWARD); 
       break;
       case CCW:
-        motorFL.run(FORWARD);
+        motorFL.run(BACKWARD);
         motorFR.run(BACKWARD);
         motorBL.run(FORWARD);
         motorBR.run(FORWARD); 
