@@ -66,8 +66,8 @@ unsigned long deltaTicks;
 unsigned long targetTicks;
 
 int angSpeed = 100;       // 0-100% speed (uint8_t if you want memory efficiency)
-int distSpeed = 100;     // 0-100% speed (uint8_t if you want memory efficiency)
-float targetAngle = 40;  // Target angle in degrees (float for precision)
+int distSpeed = 70;     // 0-100% speed (uint8_t if you want memory efficiency)
+float targetAngle = 45;  // Target angle in degrees (float for precision)
 float targetDist = 5;    // Target distance in cm (volatile if you want ISR safety)
 
 unsigned long lastUltrasonicReport = 0;
@@ -450,7 +450,7 @@ void getDistance() {  // Initialize sensor
 
   // Get distance
   int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset;  //currently 0
-  dbprintf("DIST:%d", distance_cm);
+  dbprintf("DIST:%d\n", distance_cm);
 }
 
 
@@ -470,22 +470,17 @@ void colourmode() {
 
   // Determine dominant color safely
   if (rn > gn && rn > bn && rn > 0.4) {  // 40% or more of total color
-    dbprintf("RED");
+    dbprintf("Your Astro is: RED\n");
   } else if (gn > rn && gn > bn && gn > 0.4) {
-    dbprintf("GREEN");
+    dbprintf("Your Astro is: GREEN\n");
   } else {
-    dbprintf("NONE");
+    dbprintf("Can't see sht, do again: NONE\n");
   }
-  dbprintf("red ");
- dbprintf("%d ",rn);
-
-  dbprintf("green ");
-   dbprintf("%d ",gn);
-
-  dbprintf("blue ");
-  dbprintf("%d ",bn);
-  dbprintf("\n");
+  dbprintf("r: %d%% ", (int)(rn * 100));
+  dbprintf("g: %d%% ", (int)(gn * 100));
+  dbprintf("b: %d%%\n", (int)(bn * 100));
 } //this is for tcs34725
+
 
 
 /*
@@ -583,7 +578,7 @@ void handleCommand(TPacket *command) {
       sendOK();
       distSpeed = 70;
       angSpeed = 100;
-      targetAngle = 40;
+      targetAngle = 45;
       targetDist = 5;
       break;
 
@@ -627,7 +622,7 @@ void handleCommand(TPacket *command) {
       //servo_angle(180,0);
       servo1.write(120);
       servo2.write(0);
-      dbprintf("servo opened");
+      dbprintf("servo opened!\n");
       break;
 
     case COMMAND_SERVO_CLOSE:
@@ -635,13 +630,13 @@ void handleCommand(TPacket *command) {
       //        servo_angle(0, 180); //do adjust
       servo1.write(30);
       servo2.write(90);
-      dbprintf("servo closed");
+      dbprintf("servo closed!\n");
       break;
 
     case COMMAND_TURN_AND_OPEN_TRAP:
 
       servo3.write(15);
-      dbprintf("trap opened, start shaking");
+      dbprintf("trap opened, NOW, start shaking!\n");
       break;
 
     case COMMAND_SHAKE:
