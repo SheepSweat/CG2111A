@@ -379,11 +379,11 @@ void handleCommand(void *conn, const char *buffer)
 			commandPacket.command = COMMAND_GET_STATS;	//r
 			uartSendPacket(&commandPacket);
 			break;
-			
+
 		case 'o':
 		case 'O':
 			printf("Open trap door\n");
-			commandPacket.command = COMMAND_TURN_AND_OPEN_TRAP;	//r
+			commandPacket.command = COMMAND_TURN_AND_OPEN_TRAP;//o
 			uartSendPacket(&commandPacket);
 			break;
 
@@ -392,10 +392,10 @@ void handleCommand(void *conn, const char *buffer)
 			printf("Shake\n");
 			commandPacket.command = COMMAND_SHAKE;	//r
 			uartSendPacket(&commandPacket);
-			break;		
+			break;
 
 		default:
-			printf("Bad command\n");
+			printf("Bad command,rpi\n");
 
 	}
 }

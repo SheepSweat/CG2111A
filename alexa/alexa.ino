@@ -1,4 +1,4 @@
-//#include <Adafruit_TCS34726.h>
+#include <Adafruit_TCS34725.h>
 #include <serialize.h>
 #include "packeto.h"
 #include "constanto.h"
@@ -6,8 +6,9 @@
 #include <math.h>
 #include <avr/io.h>
 #include <Servo.h>
+#include <Wire.h>
 
-//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_4X);
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_4X);
 /*
  * Alex's configuration constants
  */
@@ -64,18 +65,18 @@ unsigned long newDist;
 unsigned long deltaTicks;
 unsigned long targetTicks;
 
-int angSpeed = 70;       // 0-100% speed (uint8_t if you want memory efficiency)
+int angSpeed = 100;       // 0-100% speed (uint8_t if you want memory efficiency)
 int distSpeed = 100;     // 0-100% speed (uint8_t if you want memory efficiency)
 float targetAngle = 40;  // Target angle in degrees (float for precision)
 float targetDist = 5;    // Target distance in cm (volatile if you want ISR safety)
 
 unsigned long lastUltrasonicReport = 0;
 unsigned long currentMillis;
-unsigned int ultramode = 0;
+//static volatile int ultramode = 0;
 
 Servo servo1;  //  pin 9
 Servo servo2;  // pin 10
-Servo servo3;  // pin 46
+Servo servo3;  // pin 45
 /*
  * 
  * Alex Communication Routines.
@@ -438,10 +439,10 @@ void initializeState() {
   clearCounters();
 }
 
-int getDistance() {  // Initialize sensor
+void getDistance() {  // Initialize sensor
   digitalWrite(TRIG_PIN, LOW);
-  pinMode(TRIG_PIN, OUTPUT);
-  pinMode(ECHO_PIN, INPUT);
+  //pinMode(TRIG_PIN, OUTPUT);
+  //pinMode(ECHO_PIN, INPUT);
   // Trigger pulse
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
@@ -449,10 +450,10 @@ int getDistance() {  // Initialize sensor
 
   // Get distance
   int distance_cm = pulseIn(ECHO_PIN, HIGH) * 0.034 / 2 - offset;  //currently 0
-  return distance_cm;
+  dbprintf("DIST:%d", distance_cm);
 }
 
-/*
+
 void colourmode() {
   if (!tcs.begin()) {
     dbprintf("COLOR:INIT_FAIL");
@@ -475,10 +476,19 @@ void colourmode() {
   } else {
     dbprintf("NONE");
   }
+  dbprintf("red ");
+ dbprintf("%d ",rn);
+
+  dbprintf("green ");
+   dbprintf("%d ",gn);
+
+  dbprintf("blue ");
+  dbprintf("%d ",bn);
+  dbprintf("\n");
 } //this is for tcs34725
-*/
 
 
+/*
 void setupTCS3200() {
   pinMode(TCS3200_S0, OUTPUT);
   pinMode(TCS3200_S1, OUTPUT);
@@ -491,8 +501,8 @@ void setupTCS3200() {
   digitalWrite(TCS3200_S1, LOW);  //HIGH HIGH 100, LOW HIGH 2, HIGH LOW 20
 
   dbprintf("TCS3200 ready!");
-}
-
+}*/
+/*
 void colourmode() {
   // Read red component
   digitalWrite(TCS3200_S2, LOW);
@@ -507,8 +517,8 @@ void colourmode() {
   int green = pulseIn(TCS3200_OUT, LOW);
 
   // Read blue component
-  digitalWrite(TCS3200_S2, LOW);
-  digitalWrite(TCS3200_S3, HIGH);
+  digitalWrite(TCS3200_S2, HIGH);
+  digitalWrite(TCS3200_S3, LOW);
   delay(100);
   int blue = pulseIn(TCS3200_OUT, LOW);
 
@@ -522,18 +532,18 @@ void colourmode() {
   } else {
     dbprintf("NONE");
     //  Serial.print("NONE");
-  } /*
-  Serial.print("red ");
- Serial.print(red);
+  } 
+  dbprintf("red ");
+ dbprintf("%d ",red);
 
-  Serial.print("green ");
-   Serial.print(green);
+  dbprintf("green ");
+   dbprintf("%d ",green);
 
-  Serial.print("blue ");
-  Serial.print(blue);
-  Serial.println(" ");*/
+  dbprintf("blue ");
+  dbprintf("%d ",blue);
+  dbprintf("\n");
 }  // this is for tcs3200
-
+*/
 void cammode() {
   ;
 }
@@ -563,16 +573,16 @@ void handleCommand(TPacket *command) {
 
     case COMMAND_GEAR_1:
       sendOK();
-      distSpeed = 50;
-      angSpeed = 70;
+      distSpeed = 70;
+      angSpeed = 100;
       targetAngle = 20;
-      targetDist = 2;
+      targetDist = 1;
       break;
 
     case COMMAND_GEAR_2:
       sendOK();
       distSpeed = 70;
-      angSpeed = 70;
+      angSpeed = 100;
       targetAngle = 40;
       targetDist = 5;
       break;
@@ -580,19 +590,26 @@ void handleCommand(TPacket *command) {
     case COMMAND_GEAR_3:
       sendOK();
       distSpeed = 100;
-      angSpeed = 70;
+      angSpeed = 100;
       targetAngle = 90;
       targetDist = 10;
       break;
 
     case COMMAND_ULTRA:
       sendOK();
-      ultramode ^= 1;
+      getDistance();/*
+      if(ultramode==0){
+        dbprintf("ultramode on");
+        ultramode=1;
+      }else{
+        ultramode=0;
+        dbprintf("ultramode off");
+      }*/
       break;
 
     case COMMAND_COLOUR:
       sendOK();
-      //  colourmode();
+        colourmode();
       break;
 
     case COMMAND_CAM:
@@ -608,8 +625,8 @@ void handleCommand(TPacket *command) {
     case COMMAND_SERVO_OPEN:
       sendOK();
       //servo_angle(180,0);
-      servo1.write(130);
-      servo2.write(20);
+      servo1.write(120);
+      servo2.write(0);
       dbprintf("servo opened");
       break;
 
@@ -622,12 +639,8 @@ void handleCommand(TPacket *command) {
       break;
 
     case COMMAND_TURN_AND_OPEN_TRAP:
-      sendOK();
-      backward(2, 100);
-      left(90, 100);
-      backward(2, 100);
-      stop();
-      servo3.write(0);
+
+      servo3.write(15);
       dbprintf("trap opened, start shaking");
       break;
 
@@ -635,6 +648,7 @@ void handleCommand(TPacket *command) {
       dbprintf("SHAKING");
       sendOK();
       forward(2, 100);
+      delay(1000);
       backward(2, 100);
       stop();
       break;
@@ -697,7 +711,7 @@ void init_servo(){
 } 
 */
 
-void setup() {
+void setup(){
   // put your setup code here, to run once:
 
 
@@ -709,11 +723,10 @@ void setup() {
   //init_servo();
   servo1.attach(9);
   servo2.attach(10);
-  servo3.attach(46);
-  servo1.write(130);
-  servo2.write(20);
-  servo3.write(75);
-
+  servo3.attach(45);
+  servo1.write(120);
+  servo2.write(0);
+  servo3.write(110);//65 
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
   digitalWrite(TRIG_PIN, LOW);
@@ -826,7 +839,7 @@ void loop() {
       stop();
       dir = (TDirection)STOP;
     }
-  }
+  }/*
   // Periodically report ultrasonic distance
   if (ultramode == 1) {
     currentMillis = millis();
@@ -835,5 +848,5 @@ void loop() {
       dbprintf("DIST:%d", distance);
       lastUltrasonicReport = currentMillis;
     }
-  }
+  }*/
 }
